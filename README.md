@@ -60,5 +60,5 @@ make down
 
 To restart the services:
 ```
-make down
+make restart
 ```
