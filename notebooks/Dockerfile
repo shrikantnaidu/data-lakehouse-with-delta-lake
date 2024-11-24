@@ -31,6 +31,10 @@ ENV JUPYTER_TOKEN=""
 ENV PYSPARK_PYTHON=/opt/bitnami/python/bin/python3
 ENV PYSPARK_DRIVER_PYTHON=/opt/bitnami/python/bin/python3
 
+# Change UserId for jovyan
+RUN usermod -u 1001 jovyan
+RUN groupadd -g 1001 jovyan
+
 # Clean up to reduce image size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
