@@ -27,9 +27,9 @@ RUN curl -O https://repo1.maven.org/maven2/software/amazon/awssdk/s3/2.20.40/s3-
 # Set up JupyterLab to be accessible without a token
 ENV JUPYTER_TOKEN=""
 
-# Set Python environment variables
-ENV PYSPARK_PYTHON=/opt/bitnami/python/bin/python3
-ENV PYSPARK_DRIVER_PYTHON=/opt/bitnami/python/bin/python3
+# Change UserId for jovyan
+RUN usermod -u 1001 jovyan
+RUN groupadd -g 1001 jovyan
 
 # Clean up to reduce image size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*

@@ -1,4 +1,4 @@
-version: "3.7"
+#version: "3.7"
 services:
   spark-master:
     build:
@@ -88,11 +88,11 @@ services:
       context: ./notebooks
       dockerfile: ./Dockerfile
     container_name: "spark-notebook"
-    user: root
+    #user: root
     environment:
       - JUPYTER_ENABLE_LAB="yes"
       - GRANT_SUDO="yes"
-      - JUPYTER_TOKEN=""
+      - JUPYTER_TOKEN="777"
     volumes:
       - ./notebooks:/home/jovyan/work
       - ./notebooks/spark-defaults.conf:/usr/local/spark/conf/spark-defaults.conf
