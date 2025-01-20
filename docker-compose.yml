@@ -102,6 +102,34 @@ services:
     networks:
       - spark_network
 
+  jupyterhub:
+    build:
+      context: .
+      dockerfile: jupyterhub/Dockerfile
+    container_name: "jupyterhub"
+    ports:
+      - "8000:8000"
+    environment:
+      - DOCKER_JUPYTER_IMAGE=spark-notebook-base
+      - DOCKER_NETWORK_NAME=spark_network
+      - JUPYTER_TOKEN="777"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py
+      - ./notebooks:/srv/notebooks
+    depends_on:
+      - spark-master
+    networks:
+      - spark_network
+
+  spark-notebook-base:
+    build:
+      context: ./notebooks
+      dockerfile: ./Dockerfile
+    image: spark-notebook-base
+    networks:
+      - spark_network
+
 networks:
   spark_network:
     driver: bridge

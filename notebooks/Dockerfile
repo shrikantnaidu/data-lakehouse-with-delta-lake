@@ -1,5 +1,7 @@
 FROM jupyter/all-spark-notebook:python-3.9
 
+# FROM jupyterhub/k8s-singleuser-sample
+
 USER root 
 
 # Install Spark 3.4.0
@@ -24,12 +26,12 @@ RUN curl -O https://repo1.maven.org/maven2/software/amazon/awssdk/s3/2.20.40/s3-
     && mv delta-storage-2.4.0.jar /usr/local/spark/jars \
     && mv hadoop-aws-3.3.2.jar /usr/local/spark/jars
 
-# Set up JupyterLab to be accessible without a token
-ENV JUPYTER_TOKEN=""
+# Install additional Python packages
+RUN pip install pyspark==3.4.0 delta-spark==2.4.0
 
 # Change UserId for jovyan
-RUN usermod -u 1001 jovyan
-RUN groupadd -g 1001 jovyan
+RUN usermod -u 197609 jovyan
+# RUN groupmod -g 1001 jovyan
 
 # Clean up to reduce image size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
