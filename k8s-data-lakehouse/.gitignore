@@ -1,0 +1,48 @@
+# Kubernetes
+*.log
+*.tmp
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data
+*.csv
+*.json
+*.parquet
+!sample-notebooks/*.csv
+
+# Build artifacts
+target/
+build/
+dist/
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spark
+derby.log
+metastore_db/
+spark-warehouse/

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-master
+  namespace: data-lakehouse
+  labels:
+    app: spark-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-master
+  template:
+    metadata:
+      labels:
+        app: spark-master
+    spec:
+      containers:
+      - name: spark-master
+        image: data-lakehouse/spark:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 7077
+          name: spark-port
+        - containerPort: 8080
+          name: web-ui
+        env:
+        - name: SPARK_MODE
+          value: "master"
+        - name: SPARK_LOCAL_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: SPARK_RPC_AUTHENTICATION_ENABLED
+          value: "no"
+        - name: SPARK_RPC_ENCRYPTION_ENABLED
+          value: "no"
+        - name: SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED
+          value: "no"
+        - name: SPARK_SSL_ENABLED
+          value: "no"
+        volumeMounts:
+        - name: spark-config
+          mountPath: /opt/bitnami/spark/conf/spark-defaults.conf
+          subPath: spark-defaults.conf
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: spark-config
+        configMap:
+          name: spark-master-config

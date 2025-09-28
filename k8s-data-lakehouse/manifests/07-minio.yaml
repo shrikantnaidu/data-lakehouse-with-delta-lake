@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: data-lakehouse
+  labels:
+    app: minio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+      - name: minio
+        image: minio/minio:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9000
+          name: api
+        - containerPort: 9001
+          name: console
+        env:
+        - name: MINIO_ROOT_USER
+          value: "minio"
+        - name: MINIO_ROOT_PASSWORD
+          value: "minio123"
+        - name: MINIO_ACCESS_KEY
+          value: "minio"
+        - name: MINIO_SECRET_KEY
+          value: "minio123"
+        command:
+        - /bin/bash
+        args:
+        - -c
+        - minio server /data --console-address ":9001"
+        volumeMounts:
+        - name: minio-storage
+          mountPath: /data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 120
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /minio/health/ready
+            port: 9000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: minio-storage
+        persistentVolumeClaim:
+          claimName: minio-pvc
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-setup
+  namespace: data-lakehouse
+  labels:
+    app: minio-setup
+spec:
+  template:
+    metadata:
+      labels:
+        app: minio-setup
+    spec:
+      containers:
+      - name: mc
+        image: minio/mc:latest
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          value: "minio"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "minio123"
+        - name: AWS_REGION
+          value: "us-east-1"
+        command:
+        - /bin/sh
+        args:
+        - -c
+        - |
+          until mc config host add minio http://minio-service:9000 minio minio123; do
+            echo '...waiting for minio...'
+            sleep 5
+          done
+          mc mb minio/warehouse || true
+          mc policy set public minio/warehouse || true
+          echo "MinIO setup completed"
+      restartPolicy: OnFailure
+      backoffLimit: 3

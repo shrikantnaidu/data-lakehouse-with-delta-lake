@@ -1,0 +1,114 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: data-lakehouse-ingress
+  namespace: data-lakehouse
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: jupyter.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: jupyter-service
+            port:
+              number: 8888
+  - host: spark-master.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: spark-master-service
+            port:
+              number: 8080
+  - host: minio.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: minio-service
+            port:
+              number: 9001
+  - host: minio-api.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: minio-service
+            port:
+              number: 9000
+
+---
+# Alternative using NodePort for local development
+apiVersion: v1
+kind: Service
+metadata:
+  name: jupyter-nodeport
+  namespace: data-lakehouse
+  labels:
+    app: jupyter-notebook
+spec:
+  type: NodePort
+  ports:
+    - name: jupyter
+      port: 8888
+      targetPort: 8888
+      nodePort: 30888
+    - name: spark-ui
+      port: 4040
+      targetPort: 4040
+      nodePort: 30040
+  selector:
+    app: jupyter-notebook
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master-nodeport
+  namespace: data-lakehouse
+  labels:
+    app: spark-master
+spec:
+  type: NodePort
+  ports:
+    - name: spark-master-webui
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+  selector:
+    app: spark-master
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-nodeport
+  namespace: data-lakehouse
+  labels:
+    app: minio
+spec:
+  type: NodePort
+  ports:
+    - name: minio-api
+      port: 9000
+      targetPort: 9000
+      nodePort: 30900
+    - name: minio-console
+      port: 9001
+      targetPort: 9001
+      nodePort: 30901
+  selector:
+    app: minio

@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: data-lakehouse
+
+resources:
+  - manifests/01-namespace.yaml
+  - manifests/02-configmaps.yaml
+  - manifests/03-services.yaml
+  - manifests/04-persistent-volumes.yaml
+  - manifests/05-spark-master.yaml
+  - manifests/06-spark-workers.yaml
+  - manifests/07-minio.yaml
+  - manifests/08-jupyter.yaml
+  - manifests/09-ingress.yaml
+
+images:
+  - name: data-lakehouse/spark
+    newTag: latest
+  - name: data-lakehouse/jupyter
+    newTag: latest
+
+commonLabels:
+  project: data-lakehouse
+  version: v1.0.0

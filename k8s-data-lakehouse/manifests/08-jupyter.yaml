@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jupyter-notebook
+  namespace: data-lakehouse
+  labels:
+    app: jupyter-notebook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jupyter-notebook
+  template:
+    metadata:
+      labels:
+        app: jupyter-notebook
+    spec:
+      containers:
+      - name: jupyter-notebook
+        image: data-lakehouse/jupyter:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8888
+          name: jupyter
+        - containerPort: 4040
+          name: spark-ui
+        env:
+        - name: JUPYTER_ENABLE_LAB
+          value: "yes"
+        - name: GRANT_SUDO
+          value: "yes"
+        - name: JUPYTER_TOKEN
+          value: "777"
+        volumeMounts:
+        - name: jupyter-notebooks
+          mountPath: /home/jovyan/work
+        - name: spark-config
+          mountPath: /usr/local/spark/conf/spark-defaults.conf
+          subPath: spark-defaults.conf
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8888
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8888
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: jupyter-notebooks
+        persistentVolumeClaim:
+          claimName: jupyter-pvc
+      - name: spark-config
+        configMap:
+          name: spark-notebook-config

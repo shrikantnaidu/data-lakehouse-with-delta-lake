@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master-service
+  namespace: data-lakehouse
+  labels:
+    app: spark-master
+spec:
+  ports:
+    - name: spark-master-port
+      port: 7077
+      targetPort: 7077
+    - name: spark-master-webui
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: spark-master
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-service
+  namespace: data-lakehouse
+  labels:
+    app: minio
+spec:
+  ports:
+    - name: minio-api
+      port: 9000
+      targetPort: 9000
+    - name: minio-console
+      port: 9001
+      targetPort: 9001
+  selector:
+    app: minio
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jupyter-service
+  namespace: data-lakehouse
+  labels:
+    app: jupyter-notebook
+spec:
+  ports:
+    - name: jupyter
+      port: 8888
+      targetPort: 8888
+    - name: spark-ui
+      port: 4040
+      targetPort: 4040
+  selector:
+    app: jupyter-notebook
