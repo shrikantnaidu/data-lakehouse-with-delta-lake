@@ -147,6 +147,7 @@ services:
       - DOCKER_JUPYTER_IMAGE=${JUPYTER_IMAGE}
       - DOCKER_NETWORK_NAME=${DOCKER_NETWORK}
       - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+      - JUPYTERHUB_DUMMY_PASSWORD=${JUPYTERHUB_PASSWORD}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./docker/jupyterhub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py

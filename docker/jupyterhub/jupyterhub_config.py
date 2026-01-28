@@ -67,9 +67,9 @@ c.JupyterHub.hub_ip = '0.0.0.0'
 c.JupyterHub.port = 8000
 
 # Use native authenticator for proper multi-user support
-# Use DummyAuthenticator for testing persistence
+# Use DummyAuthenticator for testing/development
 c.JupyterHub.authenticator_class = 'jupyterhub.auth.DummyAuthenticator'
-c.DummyAuthenticator.password = "test1234"
+c.DummyAuthenticator.password = os.environ.get('JUPYTERHUB_DUMMY_PASSWORD', 'changeme')
 
 # Admin users
 c.Authenticator.admin_users = {'admin', 'dummy_user'}
