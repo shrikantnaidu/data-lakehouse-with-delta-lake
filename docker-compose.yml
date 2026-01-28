@@ -2,9 +2,10 @@
 services:
   spark-master:
     build:
-      context: ./spark
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: docker/spark/Dockerfile
     container_name: "spark-master"
+    command: [ "/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master" ]
     environment:
       - SPARK_MODE=master
       - SPARK_LOCAL_IP=spark-master
@@ -16,13 +17,16 @@ services:
       - "7077:7077"
       - "8080:8080"
     volumes:
-      - ./spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - ./docker/spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
     networks:
       - spark_network
 
   spark-worker-1:
-    image: bitnami/spark:3.4.0
+    build:
+      context: .
+      dockerfile: docker/spark/Dockerfile
     container_name: "spark-worker-1"
+    command: [ "/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077" ]
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
@@ -32,12 +36,17 @@ services:
       - SPARK_RPC_ENCRYPTION_ENABLED=no
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
+    volumes:
+      - ./jars:/opt/spark/jars-external:ro
     networks:
       - spark_network
 
   spark-worker-2:
-    image: bitnami/spark:3.4.0
+    build:
+      context: .
+      dockerfile: docker/spark/Dockerfile
     container_name: "spark-worker-2"
+    command: [ "/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077" ]
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
@@ -47,6 +56,22 @@ services:
       - SPARK_RPC_ENCRYPTION_ENABLED=no
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
+    volumes:
+      - ./jars:/opt/spark/jars-external:ro
+    networks:
+      - spark_network
+
+  metastore-db:
+    image: postgres:13
+    container_name: metastore-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "${METASTORE_PORT}:5432"
+    volumes:
+      - metastore_data:/var/lib/postgresql/data
     networks:
       - spark_network
 
@@ -61,10 +86,10 @@ services:
     volumes:
       - ./minio:/data
     environment:
-      - MINIO_ROOT_USER=minio
-      - MINIO_ROOT_PASSWORD=minio123
-      - MINIO_ACCESS_KEY=minio
-      - MINIO_SECRET_KEY=minio123
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
     networks:
       - spark_network
 
@@ -73,8 +98,8 @@ services:
     container_name: mc
     hostname: mc
     environment:
-      - AWS_ACCESS_KEY_ID=minio
-      - AWS_SECRET_ACCESS_KEY=minio123
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_KEY}
       - AWS_REGION=us-east-1
     entrypoint: >
       /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio minio123) do echo '...waiting...' && sleep 1; done; /usr/bin/mc mb minio/warehouse; /usr/bin/mc policy set public minio/warehouse; exit 0; "    
@@ -85,17 +110,26 @@ services:
 
   spark-notebook:
     build:
-      context: ./notebooks
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: docker/notebook/Dockerfile
     container_name: "spark-notebook"
-    #user: root
+    # Note: Container starts as root for entrypoint, then drops to jovyan
+    # The jupyter/docker-stacks entrypoint handles UID/GID mapping automatically
     environment:
-      - JUPYTER_ENABLE_LAB="yes"
-      - GRANT_SUDO="yes"
-      - JUPYTER_TOKEN="777"
+      - JUPYTER_ENABLE_LAB=yes
+      - GRANT_SUDO=yes
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+      # UID/GID mapping - entrypoint will adjust jovyan user to match
+      - NB_UID=1000
+      - NB_GID=100
+      # Automatically fix ownership of home and work directories
+      - CHOWN_HOME=yes
+      - CHOWN_HOME_OPTS=-R
+      - CHOWN_EXTRA=/home/jovyan/work
+      - CHOWN_EXTRA_OPTS=-R
     volumes:
-      - ./notebooks:/home/jovyan/work
-      - ./notebooks/spark-defaults.conf:/usr/local/spark/conf/spark-defaults.conf
+      - ./data/notebooks:/home/jovyan/work
+      - ./docker/notebook/spark-defaults.conf:/usr/local/spark/conf/spark-defaults.conf
     ports:
       - "8888:8888"
       - "4040:4040"
@@ -105,18 +139,19 @@ services:
   jupyterhub:
     build:
       context: .
-      dockerfile: jupyterhub/Dockerfile
+      dockerfile: docker/jupyterhub/Dockerfile
     container_name: "jupyterhub"
     ports:
       - "8000:8000"
     environment:
-      - DOCKER_JUPYTER_IMAGE=spark-notebook-base
-      - DOCKER_NETWORK_NAME=spark_network
-      - JUPYTER_TOKEN="777"
+      - DOCKER_JUPYTER_IMAGE=${JUPYTER_IMAGE}
+      - DOCKER_NETWORK_NAME=${DOCKER_NETWORK}
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py
-      - ./notebooks:/srv/notebooks
+      - ./docker/jupyterhub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py
+      - ./data/notebooks:/srv/notebooks
+      - jupyterhub_data:/srv/jupyterhub/data
     depends_on:
       - spark-master
     networks:
@@ -124,11 +159,16 @@ services:
 
   spark-notebook-base:
     build:
-      context: ./notebooks
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: docker/notebook/Dockerfile
     image: spark-notebook-base
     networks:
       - spark_network
+
+volumes:
+  jupyterhub_data:
+  metastore_data:
+
 
 networks:
   spark_network:
