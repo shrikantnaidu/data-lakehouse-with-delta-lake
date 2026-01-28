@@ -1,6 +1,8 @@
-# dev artifacts
+# Runtime data (do not commit)
+data/
 minio/
 jars/
+docs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
